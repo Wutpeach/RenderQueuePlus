@@ -24,347 +24,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
-
 /**
- * After Effects helper script: returns the number of leading zeros
- * @param  {string} n string to extrapolate the padding from
- * @return {integer}   the number of leading zeros
+ * @module common
+ * @description After Effects specific helper functions
+ * @dependencies stringutils.jsx, constants.jsx
  */
-function getPadding(n) {
-  var e = decodeURI(n).match(
-    /\[[#]+\]/g
-  );
-  return e ? e[0].length - 2 : null;
-}
-
-/**
- * Returns the number of digits of a number found
- * in the given string.
- * @param  {String} inString String to examine
- * @return {Number}          the number of digits
- */
-function getPaddingFromName(inString) {
-  var re1 = /\d{5}\.[a-zA-Z]+$/ig;
-  var re2 = /\d{4}\.[a-zA-Z]+$/ig;
-  var re3 = /\d{3}\.[a-zA-Z]+$/ig;
-  var re4 = /\d{2}\.[a-zA-Z]+$/ig;
-  if (re1.test(inString)) {
-    return 5;
-  } else if (re2.test(inString)) {
-    return 4;
-  } else if (re3.test(inString)) {
-    return 3;
-  } else if (re4.test(inString)) {
-    return 2;
-  } else {
-    return null;
-  }
-}
-
-/**
- * Returns the frame number
- * @param  {String} inString a path to a file.
- * @return {String}         the frame number as a string with padding included.
- */
-function getFrameNumberFromName(inString) {
-  var re1 = /\d{5}\.[a-zA-Z]+$/ig;
-  var re2 = /\d{4}\.[a-zA-Z]+$/ig;
-  var re3 = /\d{3}\.[a-zA-Z]+$/ig;
-  var re4 = /\d{2}\.[a-zA-Z]+$/ig;
-
-  var re;
-
-  if (re1.test(inString)) {
-    re = re1;
-  } else if (re2.test(inString)) {
-    re = re2;
-  } else if (re3.test(inString)) {
-    re = re3;
-  } else if (re4.test(inString)) {
-    re = re4;
-  } else {
-    return null;
-  }
-
-  return inString.match(re)[0].split('.')[0];
-}
-
-/**
- * Return the version number from the given string
- * eg 'v001'
- * @param  {string} inString string containing the version
- * @return {number}          the version number
- */
-function getVersionNumberFromString(inString) {
-  var match = inString.match(/(v\d\d\d)/ig);
-  if (match) {
-    return parseInt(match[0].slice(1), 10);
-  }
-  return null;
-}
-
-/**
- * Adds n number of leading zeros to a given number
- * @param  {integer} a the number to pad
- * @param  {integer} b number of leading zeros
- * @return {string}   the padded number
- */
-function pad(a, b) {
-  for (var c = a + ''; c.length < b;) c = '0' + c;
-  return c;
-}
-
-
-/**
- * Returns array of unique values.
- * @param  {[type]} a [description]
- * @return {[type]}   [description]
- */
-function uniq(a) {
-  var seen = {};
-  return a.filter(function(item) {
-    return seen.hasOwnProperty(item) ? false : (seen[item] = true);
-  });
-}
-
-/**
- * Converts a range to a dictionary of numbers
- * eg. '1-250' results in [1,2,3,..,250].
- * http://stackoverflow.com/questions/2270910/how-to-convert-sequence-of-numbers-in-an-array-to-range-of-numbers
- * @param  {string} string [description]
- * @param  {string} limit [description]
- * @return {array}       [description]
- */
-function getArrayFromRange(string, limit) {
-  var d = {};
-
-  var match;
-  var start;
-  var end;
-  var duration;
-  var idx;
-
-  if (string.indexOf(',') > 0) {
-    string = string.split(',');
-    for (var i = 0; i < string.length; i++) {
-      if (string[i].indexOf('-') > -1) {
-        match = string[i].match(/(\d*)(-+)(\d*)/);
-
-        if (!(match)) {
-          continue;
-        }
-
-        start = parseInt(match[1], 10);
-        end = parseInt(match[3], 10);
-
-        if (start > end) {
-          start = parseInt(match[3], 10);
-          end = parseInt(match[1], 10);
-        };
-
-        duration = end - start;
-        if (duration > limit) {
-          end = limit;
-        }
-
-        idx = start;
-        for (idx; idx <= end; idx++) {
-          d[idx] = idx;
-        }
-      } else {
-        match = string[i].match(/(\d*)/);
-        if (!(match)) {
-          continue;
-        }
-
-        d[parseInt(string[i], 10)] = parseInt(string[i], 10);
-      }
-    }
-    return d;
-  } else {
-    if (string.indexOf('-') > -1) {
-      // range
-      match = string.match(/(\d*)(-+)(\d*)/);
-
-      if (!(match)) {
-        return {};
-      }
-
-      start = parseInt(match[1], 10);
-      end = parseInt(match[3], 10);
-
-      if (start > end) {
-        start = parseInt(match[3], 10);
-        end = parseInt(match[1], 10);
-      };
-
-      duration = end - start;
-      if (duration > limit) {
-        end = limit;
-      }
-
-      idx = start;
-      for (idx; idx <= end; idx++) {
-        d[idx] = idx;
-      }
-      return d;
-    } else {
-      // single number
-      d = {};
-      d[parseInt(string, 10)] = parseInt(string, 10);
-      return d;
-    }
-  }
-}
-
-
-/**
- * Returns a string representation of an array.
- * eg. [1,2,3,..,250] results in '1-250'.
- * http://stackoverflow.com/questions/2270910/how-to-convert-sequence-of-numbers-in-an-array-to-range-of-numbers
- * @param  {[type]} array [description]
- * @return {[type]}       [description]
- */
-function getRanges(array) {
-  var ranges = [];
-  var rstart;
-  var rend;
-  for (var i = 0; i < array.length; i++) {
-    rstart = array[i];
-    rend = rstart;
-    while (array[i + 1] - array[i] == 1) {
-      rend = array[i + 1]; // increment the index if the numbers sequential
-      i++;
-    }
-    ranges.push(rstart == rend ? rstart + '' : rstart + '-' + rend);
-  }
-  return ranges.join(', ');
-};
-
-/**
- * CLips the given string to the specified length:
- * '...clipped text'
- * @param  {string}  inString the text to clip
- * @param  {number}  length   clip the string to this length
- * @return {string}          the clipped text
- */
-function ellipsis(inString, length) {
-  if (!(length)) {
-    var length = 100;
-  }
-
-  if (inString) {
-    if (inString.length > length) {
-      var head = inString.substr(0, 0);
-      var dots = '...';
-      var tail = inString.substr(inString.length - length, inString.length);
-      return head + dots + tail;
-    }
-    return inString;
-  } else {
-    return '-';
-  }
-};
-
-/**
- * Clips the given string to the specified length.
- * 'The clipped (...) text'
- * @param  {string}  inString the text to clip
- * @param  {number}  length   clip the string to this length
- * @return {string}          the clipped text
- */
-function ellipsis2(inString, length) {
-  if (!(length)) {
-    var length = 75;
-  }
-  if (inString) {
-    if (inString.length > length) {
-      var head = inString.substr(0, Math.round(length / 2));
-      var dots = ' ... ';
-      var tail = inString.substr(inString.length - Math.round(length / 2), inString.length);
-      return head + dots + tail;
-    }
-    return inString;
-  } else {
-    return '-';
-  }
-};
-
-/**
- * Formats a byte into a human readable string, eg 1024 -> '1KB'
- * http://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
- * @param  {number} a bytes
- * @param  {number} b decimals
- * @return {string}   formatted text
- */
-function formatBytes(a, b) {
-  if (0 === a) return '0 Byte';
-  var c = 1024;
-  var d = b + 1 || 3;
-  var e = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  var f = Math.floor(Math.log(a) / Math.log(c));
-  return (a / Math.pow(c, f)).toPrecision(d) + ' ' + e[f];
-};
-
-
-/**
- * After Effects' JSON is loaded after the panel initialized.
- * This is a polyfill for the missing module.
- * @param  {[type]} typeof [description]
- * @return {[type]}        [description]
- */
-/* eslint-disable */
-"object"!=typeof JSON&&(JSON={}),function(){"use strict";function f(t){return t<10?"0"+t:t}function quote(t){return escapable.lastIndex=0,escapable.test(t)?'"'+t.replace(escapable,function(t){var e=meta[t];return"string"==typeof e?e:"\\u"+("0000"+t.charCodeAt(0).toString(16)).slice(-4)})+'"':'"'+t+'"'}function str(t,e){var n,r,o,f,u,i=gap,p=e[t];switch(p&&"object"==typeof p&&"function"==typeof p.toJSON&&(p=p.toJSON(t)),"function"==typeof rep&&(p=rep.call(e,t,p)),typeof p){case"string":return quote(p);case"number":return isFinite(p)?String(p):"null";case"boolean":case"null":return String(p);case"object":if(!p)return"null";if(gap+=indent,u=[],"[object Array]"===Object.prototype.toString.apply(p)){for(f=p.length,n=0;n<f;n+=1)u[n]=str(n,p)||"null";return o=0===u.length?"[]":gap?"[\n"+gap+u.join(",\n"+gap)+"\n"+i+"]":"["+u.join(",")+"]",gap=i,o}if(rep&&"object"==typeof rep)for(f=rep.length,n=0;n<f;n+=1)"string"==typeof rep[n]&&(o=str(r=rep[n],p))&&u.push(quote(r)+(gap?": ":":")+o);else for(r in p)Object.prototype.hasOwnProperty.call(p,r)&&(o=str(r,p))&&u.push(quote(r)+(gap?": ":":")+o);return o=0===u.length?"{}":gap?"{\n"+gap+u.join(",\n"+gap)+"\n"+i+"}":"{"+u.join(",")+"}",gap=i,o}}var cx,escapable,gap,indent,meta,rep;"function"!=typeof Date.prototype.toJSON&&(Date.prototype.toJSON=function(){return isFinite(this.valueOf())?this.getUTCFullYear()+"-"+f(this.getUTCMonth()+1)+"-"+f(this.getUTCDate())+"T"+f(this.getUTCHours())+":"+f(this.getUTCMinutes())+":"+f(this.getUTCSeconds())+"Z":null},String.prototype.toJSON=Number.prototype.toJSON=Boolean.prototype.toJSON=function(){return this.valueOf()}),"function"!=typeof JSON.stringify&&(escapable=/[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,meta={"\b":"\\b","\t":"\\t","\n":"\\n","\f":"\\f","\r":"\\r",'"':'\\"',"\\":"\\\\"},JSON.stringify=function(t,e,n){var r;if(gap="",indent="","number"==typeof n)for(r=0;r<n;r+=1)indent+=" ";else"string"==typeof n&&(indent=n);if(rep=e,e&&"function"!=typeof e&&("object"!=typeof e||"number"!=typeof e.length))throw new Error("JSON.stringify");return str("",{"":t})}),"function"!=typeof JSON.parse&&(cx=/[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,JSON.parse=function(text,reviver){function walk(t,e){var n,r,o=t[e];if(o&&"object"==typeof o)for(n in o)Object.prototype.hasOwnProperty.call(o,n)&&(void 0!==(r=walk(o,n))?o[n]=r:delete o[n]);return reviver.call(t,e,o)}var j;if(text=String(text),cx.lastIndex=0,cx.test(text)&&(text=text.replace(cx,function(t){return"\\u"+("0000"+t.charCodeAt(0).toString(16)).slice(-4)})),/^[\],:{}\s]*$/.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g,"@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g,"]").replace(/(?:^|:|,)(?:\s*\[)+/g,"")))return j=eval("("+text+")"),"function"==typeof reviver?walk({"":j},""):j;throw new SyntaxError("JSON.parse")})}();
-/* eslint-enable */
-
-/**
- * String.trim() Polyfill
- * @param  {string} String [description]
- * @return {string}        [description]
- */
-Array.prototype.trim || (String.prototype.trim = function() {
-  return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
-});
-
-/**
- * Array.indexOf() Polyfill
- *  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf
- * @param  {[type]} a [description]
- * @param  {[type]} b [description]
- * @return {[type]}   [description]
- */
-Array.prototype.indexOf || (Array.prototype.indexOf = function(a, b) {
-  var c;
-  if (null === this) throw new TypeError('"this" is null or not defined');
-  var d = Object(this);
-  var e = d.length >>> 0;
-  if (0 === e) return -1;
-  var f = +b || 0;
-  if (Math.abs(f) === 1 / 0 && (f = 0), f >= e) return -1;
-  for (c = Math.max(f >= 0 ? f : e - Math.abs(f), 0); e > c;) {
-    if (c in d && d[c] === a) return c;
-    c++;
-  }
-  return -1;
-});
 
 /**
  * Imports a given footage path to the project.
  * Creates a 'prerenders' folder with 'comp' and 'verion' subfolders
  * where the new footage item is placed.
- * @param  {[type]} inPath   [description]
- * @param  {[type]} sequence [description]
- * @param  {[type]} compName [description]
- * @param  {[type]} version  [description]
- * @param  {[type]} framerate [description]
- * @return {[type]}          [description]
+ * @param  {string} inPath   path to footage file
+ * @param  {boolean} sequence whether to import as sequence
+ * @param  {string} compName composition name
+ * @param  {string} version  version string
+ * @param  {number} framerate framerate (currently read-only in AE)
+ * @return {FootageItem}     imported footage item
  */
 function importFootage(inPath, sequence, compName, version, framerate) {
   /**
-   * private convenence function to import a footage item
-   * @param  {[type]} inPath [description]
-   * @return {[type]}        [description]
+   * private convenience function to import a footage item
+   * @param  {string} inPath path to file
+   * @return {FootageItem}   imported footage item
    */
   function importFile(inPath) {
     var IO = new ImportOptions();
@@ -374,7 +55,7 @@ function importFootage(inPath, sequence, compName, version, framerate) {
       IO.importAs = ImportAsType.FOOTAGE;
     }
     return app.project.importFile(IO);
-  };
+  }
 
   var footageItem = importFile(inPath);
   // footageItem.mainSource.nativeFrameRate = framerate; // READ ONLY.
@@ -442,7 +123,6 @@ function importFootage(inPath, sequence, compName, version, framerate) {
         SCRIPT_NAME
       );
 
-
       footageItem.remove();
       footageItem = v.item(i);
       v.item(i).mainSource.reload();
@@ -457,101 +137,9 @@ function importFootage(inPath, sequence, compName, version, framerate) {
   return footageItem;
 }
 
-
-/**
- * [Displays a popup dialog with editable text contents
- * @param  {string} title Title of the dialog
- * @param  {string} input Dialog contents
- */
-function alertScroll(title, input) {
-  var w = new Window('dialog', title);
-  var list = w.add('edittext', undefined, input, {
-    multiline: true,
-    scrolling: true,
-  });
-  w.add('button', undefined, 'Close', {
-    name: 'ok',
-  });
-  list.size = [600, 300];
-  w.show();
-}
-
-/**
- * Custom error catcher.
- * @param  {[type]} e [description]
- */
-function catchError(e) {
-  var prop;
-
-  var number;
-  var filename;
-  var line;
-  var source;
-  var start;
-  var end;
-  var message;
-  var name;
-  var description;
-
-  var MESSAGE = '';
-
-  for (prop in e) {
-    if (prop == 'number') {
-      number = parseInt(e[prop]);
-    } else if (prop == 'fileName') {
-      filename = new File(e[prop]).absoluteURI;
-    } else if (prop == 'line') {
-      line = parseInt(e[prop]);
-    } else if (prop == 'source') {
-      source = e[prop];
-      source = source.trim();
-      source = source.split('\n');
-      var ln = '';
-      for (var i = 0; i < source.length; i++) {
-        ln += String(pad(i + 1, 4)) + '  ' + String(source[i]) + '\n';
-      }
-      source = ln;
-    } else if (prop == 'start') {
-      start = e[prop];
-    } else if (prop == 'end') {
-      end = e[prop];
-    } else if (prop == 'message') {
-      message = e[prop];
-    } else if (prop == 'name') {
-      name = e[prop];
-    } else if (prop == 'description') {
-      description = e[prop];
-    }
-  };
-  MESSAGE = String(
-    'Error:\n\n' +
-    '---------------------------------\n\n' +
-    '"' + message + '"\n\n' +
-    '---------------------------------\n\n' +
-    'Line number: ' + line + '\n' +
-    'File: ' + filename + '\n\n' +
-    'Source:\n\n' + source
-  );
-  alertScroll(SCRIPT_NAME, MESSAGE);
-};
-
-/**
- * Returns a filename safe string
- * @param  {[type]} str [description]
- * @return {[type]}     [description]
- */
-function fileNameSafeString(str) {
-  return str
-    .replace(/([^a-z0-9]+)/gi, '_')
-    .replace(/-{1,}/gi, '_')
-    .replace(/_{1,}/gi, '_')
-    .toLowerCase();
-}
-
-
 /**
  * Reveals the folder if exists, or it's parent.
- * @param  {ExtendScriptFileObject} p the file or folder object to reveal
+ * @param  {File} p the file or folder object to reveal
  */
 function reveal(p) {
   if (p.exists) {
@@ -559,7 +147,7 @@ function reveal(p) {
   } else {
     reveal(p.parent);
   }
-};
+}
 
 /**
  * Opens the given website in a browser.
@@ -586,7 +174,7 @@ function setRenderQueueItemDefaults(rqIndex, omIndex, pathcontrol) {
   var rqItem = app.project.renderQueue.item(rqIndex);
   var omItem = data.getOutputModule(rqIndex, omIndex);
 
-  rqItem.setSetting('Time Span', 0); // 'Length of the comp'
+  rqItem.setSetting('Time Span', TIME_SPAN_COMP_LENGTH);
   if (pathcontrol.getPadding() === 0) {
     rqItem.setSetting('Skip Existing Files', false);
   } else {
@@ -599,11 +187,11 @@ function setRenderQueueItemDefaults(rqIndex, omIndex, pathcontrol) {
    * Keeping it unexposed for the time being.
    */
   function setDefaults() {
-    rqItem.setSetting('Quality', 2); // 'best'
-    rqItem.setSetting('Resolution', '1,1'); // 'full' {'x': 1, 'y': 1}
+    rqItem.setSetting('Quality', QUALITY_BEST);
+    rqItem.setSetting('Resolution', RESOLUTION_FULL);
     omItem.setSetting('Video Output', true);
     omItem.setSetting('Use Comp Frame Number', false);
-    omItem.setSetting('Starting #', 1);
+    omItem.setSetting('Starting #', STARTING_FRAME_NUMBER);
     omItem.setSetting('Resize', false);
   }
 
@@ -612,12 +200,12 @@ function setRenderQueueItemDefaults(rqIndex, omIndex, pathcontrol) {
   // omItem.setSetting('Channels', 1); // 'RGBA' - READ ONLY PROPERTY
   // omItem.setSetting('Depth', 32); // 'Millions+' - READ ONLY PROPERTY
   // omItem.setSetting('Color', 0); // 'Straight' - READ ONLY PROPERTY
-};
+}
 
 /**
  * Checks if an object is empty
  * @param  {object}  o the object to check
- * @return {Boolean}
+ * @return {Boolean}   true if empty, false otherwise
  */
 function isObjectEmpty(o) {
   var key;
@@ -641,12 +229,12 @@ function numOutputModules() {
     }
   }
   return k;
-};
+}
 
 /**
  * Runs checks before executing aerender
- * @param {Number} rqIndex Index
- * @return {Bool} [description]
+ * @param {Number} rqIndex Render Queue item index
+ * @return {Boolean} true if ok to start, false otherwise
  */
 function aerenderOkToStart(rqIndex) {
   var err = 'After Effects warning: \'Skip Existing Files\' is available only with ONE output module of type \'Sequence\'.';

@@ -28,6 +28,15 @@ SOFTWARE.
 (function(thisObj) {
   var projectFile = app.project.file;
 
+  // Utility modules (must be loaded first)
+  // @include "constants.jsx"
+  // @include "polyfills.jsx"
+  // @include "stringutils.jsx"
+  // @include "arrayutils.jsx"
+  // @include "formatutils.jsx"
+  // @include "errorhandler.jsx"
+
+  // Core modules
   // @include "platform.jsx"
   // @include "common.jsx"
   // @include "icons.jsx"
