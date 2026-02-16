@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extendscript-debug",
+      "request": "launch",
+      "name": "Debug RenderQueue+",
+      "script": "${workspaceFolder}/RenderQueue+.jsx",
+      "stopOnEntry": false,
+      "trace": true,
+      "hostAppSpecifier": "aftereffects"
+    }
+  ]
+}

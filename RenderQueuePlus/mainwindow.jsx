@@ -755,10 +755,18 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       var index = cls.prototype.getSelection();
 
       var scriptExt = platform.getScriptExtension();
+
+      // Clean up project and comp names to avoid shell special characters
+      // Remove brackets, spaces, and other problematic characters
+      var cleanProjectName = app.project.file.displayName
+        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
+        .replace(/_+/g, '_');
+      var cleanCompName = data.item(index).compname
+        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
+        .replace(/_+/g, '_');
+
       var scriptname = (
-        '[' + app.project.file.displayName + ']' +
-        '[' + data.item(index).compname + ']' +
-        '_ffmpeg' + scriptExt
+        cleanProjectName + '_' + cleanCompName + '_ffmpeg' + scriptExt
       );
       var scriptFile = new File(TEMP_DIR.absoluteURI + '/' + scriptname);
 
@@ -796,6 +804,9 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
         var scriptContent = '#!/bin/bash\n' + cmd + ' &';
 
+        // Set line feed encoding to Unix for Mac
+        scriptFile.encoding = 'UTF-8';
+        scriptFile.lineFeed = 'Unix';
         scriptFile.open('w');
         scriptFile.write(scriptContent);
         scriptFile.close();
@@ -857,25 +868,47 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
       var index = cls.prototype.getSelection();
       var scriptExt = platform.getScriptExtension();
+
+      // Clean up project and comp names to avoid shell special characters
+      // Remove brackets, spaces, and other problematic characters
+      var cleanProjectName = app.project.file.displayName
+        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
+        .replace(/_+/g, '_');  // Replace multiple underscores with single
+      var cleanCompName = data.item(index).compname
+        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
+        .replace(/_+/g, '_');
+
       var scriptname = (
-        '[' + app.project.file.displayName + ']' +
-        '[' + data.item(index).compname + ']' +
-        scriptExt
+        cleanProjectName + '_' + cleanCompName + scriptExt
       );
 
       scriptFile = new File(TEMP_DIR.absoluteURI + '/' + scriptname);
 
+      // Save project
+      $.writeln('RenderQueue+: Saving project...');
       app.project.save();
+      $.writeln('RenderQueue+: Project saved.');
 
-      var aeparchive = new Aeparchives(
-        getSetting('pathcontrol_path'),
-        data.item(index).compname,
-        pathcontrol.getVersionString()
-      );
-      aeparchive.createDir();
-      aeparchive.archive();
+      // Create archive
+      $.writeln('RenderQueue+: Creating archive...');
+      try {
+        var aeparchive = new Aeparchives(
+          getSetting('pathcontrol_path'),
+          data.item(index).compname,
+          pathcontrol.getVersionString()
+        );
+        aeparchive.createDir();
+        aeparchive.archive();
+        $.writeln('RenderQueue+: Archive created.');
+      } catch (archiveError) {
+        $.writeln('RenderQueue+: Archive failed: ' + archiveError.toString());
+        // Continue anyway - archive is not critical
+      }
 
+      // Create output directory
+      $.writeln('RenderQueue+: Creating output directory...');
       omItem.file.parent.create();
+      $.writeln('RenderQueue+: Output directory created.');
 
       if (promptForFile) {
         var dialogFilter = platform.isWindows ? 'Batch:*.bat' : 'Shell Script:*.sh';
@@ -916,8 +949,10 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
           ' -sound ON -continueOnMissingFootage';
       }
 
+      $.writeln('RenderQueue+: Checking for running processes...');
       var manager = new Taskmanager();
       var PIDs = manager.getPIDs();
+      $.writeln('RenderQueue+: Found ' + PIDs.length + ' running aerender processes');
       var start;
 
       if (PIDs.length !== 0) {
@@ -934,6 +969,10 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
           scriptContent = '#!/bin/bash\n' +
             '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
             cmd + ' &\n';
+
+          // Set line feed encoding to Unix for Mac
+          scriptFile.encoding = 'UTF-8';
+          scriptFile.lineFeed = 'Unix';
           scriptFile.open('w');
           scriptFile.write(scriptContent);
           scriptFile.close();
@@ -980,16 +1019,27 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         scriptFile.write(variables + '\n' + start);
         scriptFile.close();
       } else {
+        $.writeln('RenderQueue+: Creating shell script...');
         scriptContent = '#!/bin/bash\n' +
           '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
           cmd + ' &\n';
+        $.writeln('RenderQueue+: Script content: ' + scriptContent);
+
+        // Set line feed encoding to Unix for Mac
+        scriptFile.encoding = 'UTF-8';
+        scriptFile.lineFeed = 'Unix';
         scriptFile.open('w');
         scriptFile.write(scriptContent);
         scriptFile.close();
+
+        $.writeln('RenderQueue+: Setting execute permissions...');
         platform.setExecutePermissions(scriptFile);
+        $.writeln('RenderQueue+: Script file created at: ' + scriptFile.fsName);
       }
 
+      $.writeln('RenderQueue+: Executing script...');
       scriptFile.execute();
+      $.writeln('RenderQueue+: Script executed successfully.');
     },
 
     setSelection: function(index) {
@@ -1109,6 +1159,12 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
           'exit /b';
       } else {
         string = '#!/bin/bash\n' + cmd + ' &';
+      }
+
+      // Set line feed encoding to Unix for Mac
+      if (platform.isMac) {
+        file.encoding = 'UTF-8';
+        file.lineFeed = 'Unix';
       }
 
       file.open('w');

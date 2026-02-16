@@ -37,7 +37,7 @@ var renderQueuePlus = this;
   var WEBSITE = 'http://gergely-wootsch.com/renderqueueplus';
   var DESCRIPTION = 'A handy workflow utility to render, review & manager outputs.';
   var HELP = '';
-  var MODULE_DIR = new Folder('./RenderQueuePlus');
+  var MODULE_DIR = new Folder(SCRIPT_FILE.parent.absoluteURI + '/RenderQueuePlus');
   var TEMP_DIR = new Folder(Folder.temp.absoluteURI + '/' + SCRIPT_NAME);
   TEMP_DIR.create();
 

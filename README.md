@@ -164,6 +164,8 @@ If you delete frames from an existing sequence of images, those frames will auto
 - ✅ Platform-specific process management
 - ✅ Cross-platform directory operations
 - ✅ FFmpeg integration for both platforms
+- ✅ Fixed AE 2025 path detection (aerender location changed)
+- ✅ Fixed system.callSystem hang issue on Mac (disabled process checking on Mac)
 
 #### About
 

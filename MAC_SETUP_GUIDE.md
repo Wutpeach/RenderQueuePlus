@@ -16,11 +16,19 @@
 点击 "Yes" 后，需要导航到正确的位置：
 
 **标准路径格式：**
+
+**After Effects 2025 及更新版本：**
+```
+/Applications/Adobe After Effects [版本]/aerender
+```
+
+**After Effects 2024 及更早版本：**
 ```
 /Applications/Adobe After Effects [版本]/Adobe After Effects [版本].app/Contents/MacOS/aerender
 ```
 
 **具体示例：**
+- After Effects 2025: `/Applications/Adobe After Effects 2025/aerender` (新路径结构)
 - After Effects 2024: `/Applications/Adobe After Effects 2024/Adobe After Effects 2024.app/Contents/MacOS/aerender`
 - After Effects 2023: `/Applications/Adobe After Effects 2023/Adobe After Effects 2023.app/Contents/MacOS/aerender`
 - After Effects 2022: `/Applications/Adobe After Effects 2022/Adobe After Effects 2022.app/Contents/MacOS/aerender`
@@ -30,8 +38,9 @@
 **方法 1：使用 Finder**
 1. 打开 Finder
 2. 按 `Cmd + Shift + G` (前往文件夹)
-3. 输入：`/Applications/Adobe After Effects 2024/Adobe After Effects 2024.app/Contents/MacOS/`
-4. 选择 `aerender` 文件
+3. 对于 AE 2025，输入：`/Applications/Adobe After Effects 2025/`
+4. 对于 AE 2024 及更早版本，输入：`/Applications/Adobe After Effects 2024/Adobe After Effects 2024.app/Contents/MacOS/`
+5. 选择 `aerender` 文件
 
 **方法 2：使用终端**
 ```bash
@@ -85,14 +94,34 @@ which ffmpeg
 
 ## 常见问题
 
+### Q: After Effects 2025 点击渲染后卡住/假死？
+**A:** 这是 After Effects 2025 的一个已知问题。`system.callSystem()` 在某些情况下会导致应用程序挂起。
+
+**解决方案：** 已在代码中修复。脚本现在会在 Mac 上跳过进程检查，避免触发这个问题。如果你仍然遇到问题：
+1. 确保使用最新版本的脚本
+2. 重启 After Effects
+3. 检查 aerender 路径是否正确设置
+
 ### Q: 为什么脚本找不到 aerender？
-**A:** Mac 上的 aerender 位于应用程序包内部（.app/Contents/MacOS/），不在应用程序文件夹的根目录。脚本现在会尝试自动检测，但如果失败，需要手动选择。
+**A:** Mac 上的 aerender 位置因版本而异：
+- **After Effects 2025+**: aerender 直接位于应用程序文件夹下（如 `/Applications/Adobe After Effects 2025/aerender`）
+- **After Effects 2024 及更早版本**: aerender 位于应用程序包内部（如 `.app/Contents/MacOS/aerender`）
+
+脚本现在会自动检测两种路径结构，但如果失败，需要手动选择。
 
 ### Q: 如何验证 aerender 路径是否正确？
 **A:** 在终端运行：
+
+对于 After Effects 2025：
+```bash
+"/Applications/Adobe After Effects 2025/aerender" -version
+```
+
+对于 After Effects 2024 及更早版本：
 ```bash
 "/Applications/Adobe After Effects 2024/Adobe After Effects 2024.app/Contents/MacOS/aerender" -version
 ```
+
 如果路径正确，会显示 After Effects 版本信息。
 
 ### Q: 脚本生成的 .sh 文件无法执行？
@@ -140,7 +169,13 @@ ls -la ~/Library/Caches/TemporaryItems/
 
 ### 手动测试 Aerender
 ```bash
-# 测试 aerender 是否工作
+# 测试 aerender 是否工作 (AE 2025)
+"/Applications/Adobe After Effects 2025/aerender" \
+  -project "/path/to/project.aep" \
+  -rqindex 1 \
+  -output "/path/to/output.mov"
+
+# 测试 aerender 是否工作 (AE 2024 及更早版本)
 "/Applications/Adobe After Effects 2024/Adobe After Effects 2024.app/Contents/MacOS/aerender" \
   -project "/path/to/project.aep" \
   -rqindex 1 \

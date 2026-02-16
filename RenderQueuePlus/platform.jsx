@@ -185,7 +185,8 @@ var Platform = function() {
           // Continue to try other methods
         }
 
-        // Try common installation paths with proper .app bundle structure
+        // Try common installation paths
+        // Note: AE 2025 changed structure - aerender is now directly in the version folder
         var commonVersions = [
           'Adobe After Effects 2025',
           'Adobe After Effects 2024',
@@ -198,15 +199,24 @@ var Platform = function() {
 
         for (var i = 0; i < commonVersions.length; i++) {
           var version = commonVersions[i];
+
+          // Try new structure first (AE 2025+): aerender directly in version folder
+          var directPath = '/Applications/' + version + '/aerender';
+          var directFile = new File(directPath);
+          if (directFile.exists) {
+            return directPath;
+          }
+
+          // Try old structure: aerender inside .app bundle
           var appBundlePath = '/Applications/' + version + '/' + version + '.app/Contents/MacOS/aerender';
-          var aerenderFile = new File(appBundlePath);
-          if (aerenderFile.exists) {
+          var appBundleFile = new File(appBundlePath);
+          if (appBundleFile.exists) {
             return appBundlePath;
           }
         }
 
-        // If not found, return a generic path (will prompt user to select)
-        return '/Applications/Adobe After Effects 2024/Adobe After Effects 2024.app/Contents/MacOS/aerender';
+        // If not found, return a generic path for 2025 (will prompt user to select)
+        return '/Applications/Adobe After Effects 2025/aerender';
       }
     },
 

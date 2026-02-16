@@ -32,10 +32,26 @@ var Taskmanager = function() {
 
   var cls = function() {
     this.data = function() {
-        var cmd = platform.getProcessListCommand();
-        var data = system.callSystem(cmd);
-        if (data.length > 0) {
-            return data;
+        try {
+            // WORKAROUND: On Mac with AE 2025, system.callSystem can cause hangs
+            // Skip process checking on Mac to avoid this issue
+            if (platform.isMac) {
+                $.writeln('RenderQueue+: Skipping process check on Mac (known issue with AE 2025)');
+                return '';
+            }
+
+            var cmd = platform.getProcessListCommand();
+            $.writeln('RenderQueue+: Executing process list command: ' + cmd);
+
+            var data = system.callSystem(cmd);
+            $.writeln('RenderQueue+: Process list retrieved, length: ' + data.length);
+
+            if (data && data.length > 0) {
+                return data;
+            }
+        } catch (e) {
+            $.writeln('RenderQueue+: Failed to get process list: ' + e.toString());
+            // Return empty string to continue without process checking
         }
         return '';
     }();
