@@ -39,6 +39,42 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
   var versionsReset;
   var versionsDropdown;
 
+  /**
+   * Helper function to get current output module for selected item
+   * @return {OutputModule|null} The output module or null if not found
+   */
+  function getCurrentOutputModule() {
+    if (!(listItem.selection)) {
+      return null;
+    }
+    return data.getOutputModule(
+      data.item(listItem.selection.index).rqIndex,
+      data.item(listItem.selection.index).omIndex
+    );
+  }
+
+  /**
+   * Helper function to get pathcontrol for current selection
+   * @return {Pathcontrol|null} Initialized pathcontrol or null if no selection
+   */
+  function getPathcontrolForSelection() {
+    var omItem = getCurrentOutputModule();
+    if (omItem === null) {
+      return null;
+    }
+    var pathcontrol = new Pathcontrol();
+    pathcontrol.initFromOutputModule(omItem);
+    return pathcontrol;
+  }
+
+  /**
+   * Helper function to refresh UI when output module is invalid
+   */
+  function refreshUI() {
+    cls.prototype.clear();
+    refreshButton_onClick();
+  }
+
   var cls = function() {
     this.createUI = function() {
       palette = thisObj instanceof Panel ? thisObj : new Window(
@@ -702,19 +738,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       }
 
       var platform = getPlatform();
-      var omItem = data.getOutputModule(
-        data.item(listItem.selection.index).rqIndex,
-        data.item(listItem.selection.index).omIndex
-      );
+      var omItem = getCurrentOutputModule();
 
       if (omItem === null) {
-        cls.prototype.clear();
-        refreshButton_onClick();
+        refreshUI();
         return;
       }
 
-      var pathcontrol = new Pathcontrol();
-      pathcontrol.initFromOutputModule(omItem);
+      var pathcontrol = getPathcontrolForSelection();
 
       var ffmpeg = new FFMPEG();
       var isSequence = ffmpeg.isSequence(data.item(listItem.selection.index).ext);
@@ -831,19 +862,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       }
 
       var platform = getPlatform();
-      var omItem = data.getOutputModule(
-        data.item(listItem.selection.index).rqIndex,
-        data.item(listItem.selection.index).omIndex
-      );
+      var omItem = getCurrentOutputModule();
 
       if (omItem === null) {
-        cls.prototype.clear();
-        refreshButton_onClick();
+        refreshUI();
         return;
       }
 
-      var pathcontrol = new Pathcontrol();
-      pathcontrol.initFromOutputModule(omItem);
+      var pathcontrol = getPathcontrolForSelection();
 
       var saved;
       var scriptFile;
@@ -1086,19 +1112,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     }
 
     var platform = getPlatform();
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
-    var pathcontrol = new Pathcontrol();
-    pathcontrol.initFromOutputModule(omItem);
+    var pathcontrol = getPathcontrolForSelection();
 
     if (!(listItem.selection)) {
       return;
@@ -1210,19 +1231,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
-    var pathcontrol = new Pathcontrol();
-    pathcontrol.initFromOutputModule(omItem);
+    var pathcontrol = getPathcontrolForSelection();
 
     if (pathcontrol.getVersion() === null) {
       Window.alert(
@@ -1342,19 +1358,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
-    var pathcontrol = new Pathcontrol();
-    pathcontrol.initFromOutputModule(omItem);
+    var pathcontrol = getPathcontrolForSelection();
 
     try {
       if (listItem.selection) {
@@ -1429,19 +1440,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
-    var pathcontrol = new Pathcontrol();
-    pathcontrol.initFromOutputModule(omItem);
+    var pathcontrol = getPathcontrolForSelection();
 
     refreshButton_onClick();
     if (!(listItem.selection)) {
@@ -1481,14 +1487,10 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
@@ -1511,18 +1513,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
-    var pathcontrol = new Pathcontrol();
+    var pathcontrol = getPathcontrolForSelection();
     pathcontrol.initFromOutputModule(omItem);
 
     pathcontrol.setVersion(1);
@@ -1550,19 +1548,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
     var rootpath = getSetting('pathcontrol_path');
 
-    var omItem = data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
-    );
+    var omItem = getCurrentOutputModule();
 
     if (omItem === null) {
-      cls.prototype.clear();
-      refreshButton_onClick();
+      refreshUI();
       return;
     }
 
-    var pathcontrol = new Pathcontrol();
-    pathcontrol.initFromOutputModule(omItem);
+    var pathcontrol = getPathcontrolForSelection();
 
     if (sel.text === 'Set Version Control') {
       setRenderQueueItemDefaults(
@@ -1630,19 +1623,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       versionsReset.enabled = true;
       versionsDropdown.enabled = true;
 
-      var omItem = data.getOutputModule(
-        data.item(listItem.selection.index).rqIndex,
-        data.item(listItem.selection.index).omIndex
-      );
+      var omItem = getCurrentOutputModule();
 
       if (omItem === null) {
-        cls.prototype.clear();
-        refreshButton_onClick();
+        refreshUI();
         return;
       }
 
-      var pathcontrol = new Pathcontrol();
-      pathcontrol.initFromOutputModule(omItem);
+      var pathcontrol = getPathcontrolForSelection();
 
 
       if (pathcontrol.getVersion()) {
