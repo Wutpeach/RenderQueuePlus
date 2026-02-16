@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 var Taskmanager = function() {
-  var platform = new Platform();
+  var platform = getPlatform();
   var re1 = platform.isWindows ? /(.*aerender.exe.*)/gim : /(.*aerender.*)/gim;
   var re2 = /(.*afterfx.com.*)/gim;
 

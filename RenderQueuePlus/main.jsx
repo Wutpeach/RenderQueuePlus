@@ -38,6 +38,7 @@ SOFTWARE.
 
   // Core modules
   // @include "platform.jsx"
+  // @include "platformsingleton.jsx"
   // @include "common.jsx"
   // @include "icons.jsx"
   // @include "settings.jsx"
@@ -52,8 +53,8 @@ SOFTWARE.
   // @include "taskmanager.jsx"
   // @include "taskmanagerUI.jsx"
 
-  // Initialize platform
-  var platform = new Platform();
+  // Initialize platform singleton
+  var platform = getPlatform();
 
   // Module globals
   var settings = new Settings();

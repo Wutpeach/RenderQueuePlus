@@ -115,7 +115,7 @@ var Settings = function(thisObj) {
    * Set rv executable path
    */
   function pickRVButton_onClick() {
-    var platform = new Platform();
+    var platform = getPlatform();
     var file = new File('/');
     var filter = platform.isWindows ? 'Windows exe files:*.exe' : 'All files:*';
     file = file.openDlg(
@@ -203,7 +203,7 @@ var Settings = function(thisObj) {
    * Sets the ffmpeg_bin.
    */
   function ffmpegPickButton_onClick() {
-    var platform = new Platform();
+    var platform = getPlatform();
     var ffmpeg = new File('/');
     var filter = platform.isWindows ? 'ffmpeg.exe:ffmpeg.exe' : 'All files:*';
     ffmpeg = ffmpeg.openDlg(
@@ -250,7 +250,7 @@ var Settings = function(thisObj) {
    * Sets the aerender bin.
    */
   function aerenderPickButton_onClick() {
-    var platform = new Platform();
+    var platform = getPlatform();
     var aerender = new File('/');
     var filter = platform.isWindows ? 'aerender.exe:aerender.exe' : 'All files:*';
     aerender = aerender.openDlg(
@@ -563,7 +563,7 @@ var Settings = function(thisObj) {
       }
 
       settings.aerender.aerender_bin = function() {
-        var platform = new Platform();
+        var platform = getPlatform();
         var aerender = new File('/');
 
         if (getSetting('aerender_bin')) {

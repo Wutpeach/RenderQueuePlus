@@ -701,7 +701,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       }
 
-      var platform = new Platform();
+      var platform = getPlatform();
       var omItem = data.getOutputModule(
         data.item(listItem.selection.index).rqIndex,
         data.item(listItem.selection.index).omIndex
@@ -830,7 +830,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       }
 
-      var platform = new Platform();
+      var platform = getPlatform();
       var omItem = data.getOutputModule(
         data.item(listItem.selection.index).rqIndex,
         data.item(listItem.selection.index).omIndex
@@ -1085,7 +1085,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var platform = new Platform();
+    var platform = getPlatform();
     var omItem = data.getOutputModule(
       data.item(listItem.selection.index).rqIndex,
       data.item(listItem.selection.index).omIndex

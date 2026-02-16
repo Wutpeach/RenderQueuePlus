@@ -5,7 +5,7 @@ var FFMPEG = function() {
   ' -i "[basepath]' + '/' + '[basename][padding].[ext]" [frameoverlay] -start_number [start]' +
   ' -frames:v [duration] [customOptions] "[output]"';
 
-  var platform = new Platform();
+  var platform = getPlatform();
   var ffmpeg_overlay = '-vf "drawtext=fontfile=[fontpath]: text=[text]%%{eif\\\\:n+[start]\\\\:d}: x=(w-tw)/2: y=h-(2*lh): fontcolor=white: box=1: boxcolor=0x00000099"';
 
   var cls = function(path) {

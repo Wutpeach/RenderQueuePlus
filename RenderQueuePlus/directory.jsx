@@ -29,7 +29,7 @@ SOFTWARE.
  * Wrapper module for cross-platform directory commands.
  */
 var Directory = function(inPath) {
-  var platform = new Platform();
+  var platform = getPlatform();
 
   var cls = function(inPath) {
     var pathFile = new File(inPath);
