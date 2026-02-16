@@ -5,9 +5,13 @@ RenderQueue+ adds ***output versioning, background rendering, relative output pa
 
 The panel loosely integrates with ***Shotgun's RV*** that can be used for reviewing your output. Using FFmpeg, it automatically generates movies from your sequence outputs giving you a wider gamut to interact and review your rendered image-sequences.
 
+## Platform Support
+
+✅ **Windows** - Fully supported
+✅ **Mac OS** - Fully supported (as of 2026)
+
 ## Limitations
 
-* **The script does not support Mac OS at the moment.**.
 * The versioning pattern is hard-coded and there's no way to customize as things stand. I hope to add custom templates in the future
 * FFmpeg output could do with presets
 * Panel has been tested but bugs are possible
@@ -15,6 +19,7 @@ The panel loosely integrates with ***Shotgun's RV*** that can be used for review
 
 ## Installation
 
+### Windows
 
 Place **both** the **RenderQueue+.jsx** file _**and**_ the **RenderQueuePlus** folder into After Effect's **ScriptUI Panels** folder.
 
@@ -31,12 +36,61 @@ C:\Program Files\Adobe\Adobe After Effects [Your Version]\Support Files\Scripts\
 
 After restarting After Effects you should see a 'RenderQueue+.jsx' menu-item at the bottom of the 'Window' menu.
 
+### Mac OS
+
+Place **both** the **RenderQueue+.jsx** file _**and**_ the **RenderQueuePlus** folder into After Effect's **ScriptUI Panels** folder.
+
+```
+ScriptUI Panels/RenderQueue+.jsxb
+ScriptUI Panels/RenderQueuePlus/
+```
+
+It's located usually here (replace [Your Version] with the After Effects version you have):
+
+```
+/Applications/Adobe After Effects [Your Version]/Scripts/ScriptUI Panels
+```
+
+After restarting After Effects you should see a 'RenderQueue+.jsx' menu-item at the bottom of the 'Window' menu.
+
+#### Mac-Specific Setup
+
+On first run, you may need to manually locate the `aerender` executable. It's located inside the After Effects application bundle:
+
+```
+/Applications/Adobe After Effects [Version]/Adobe After Effects [Version].app/Contents/MacOS/aerender
+```
+
+**Quick way to find it:**
+1. Press `Cmd + Shift + G` in the file dialog
+2. Paste the path above (adjust version number)
+3. Select the `aerender` file
+
+For detailed Mac setup instructions, see [MAC_SETUP_GUIDE.md](MAC_SETUP_GUIDE.md).
+
+#### Optional: FFmpeg (for movie generation)
+
+**Mac users:** Install FFmpeg via Homebrew:
+```bash
+brew install ffmpeg
+```
+
+Then in RenderQueue+ settings, set the FFmpeg path:
+- Intel Mac: `/usr/local/bin/ffmpeg`
+- Apple Silicon: `/opt/homebrew/bin/ffmpeg`
+
+**Windows users:** Download FFmpeg from [ffmpeg.org](https://ffmpeg.org) and set the path in settings.
+
 ## Features
 
 ##### Background (and batch rendering)
 
 RenderQueue+ can render output modules in the background so you don't have to stop work to wait for renders to complete.
-You can also make a batch file that can be launched across multiple computers on a network. This might sometimes be handy for small studios or individuals where a render-farm solution is not available.
+
+**Windows:** Creates `.bat` batch files that can be launched across multiple computers on a network.
+**Mac:** Creates `.sh` shell scripts for background rendering.
+
+This might sometimes be handy for small studios or individuals where a render-farm solution is not available.
 
 
 #### Version Control
@@ -95,11 +149,35 @@ This is enforced as a matter of principle to keep things, but chiefly, the autho
 
 If you delete frames from an existing sequence of images, those frames will automatically be re-rendered (the panel automatically sets sequences to skip existing files when you set Version Control). This allows you to re-render ranges, and specific frames too. RenderQueue+ comes with a frame manager to help you delete image ranges, and/or specific frames straight from After Effects.
 
+## Documentation
+
+- [MAC_SETUP_GUIDE.md](MAC_SETUP_GUIDE.md) - Detailed Mac setup instructions
+- [MAC_COMPATIBILITY.md](MAC_COMPATIBILITY.md) - Technical implementation details
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Development overview
+
+## Changelog
+
+### 2026 - Mac Compatibility Update
+- ✅ Added full Mac OS support
+- ✅ Cross-platform script generation (.bat for Windows, .sh for Mac)
+- ✅ Auto-detection of aerender on both platforms
+- ✅ Platform-specific process management
+- ✅ Cross-platform directory operations
+- ✅ FFmpeg integration for both platforms
+
 #### About
+
+**Original Author:**
 Copyright (c) 2018 Gergely Wootsch
 hello@gergely-wootsch.com
 http://gergely-wotsch.com
 
+**Mac Compatibility:**
+Added in 2026 - Full cross-platform support for Windows and Mac OS
+
 #### Support and contact
-http://gergely-wootsch.com/renderqueueplus
-hello@gergely-wootsch.com
+
+Original project: http://gergely-wootsch.com/renderqueueplus
+Email: hello@gergely-wootsch.com
+
+For Mac-specific issues, please refer to [MAC_SETUP_GUIDE.md](MAC_SETUP_GUIDE.md)
