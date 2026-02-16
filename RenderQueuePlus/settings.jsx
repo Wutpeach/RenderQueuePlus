@@ -112,14 +112,20 @@ var Settings = function(thisObj) {
   settings.pathcontrol.fsName = '';
 
   /**
-   * Set rv.exe path
+   * Set rv executable path
    */
   function pickRVButton_onClick() {
+    var platform = new Platform();
     var file = new File('/');
+    var filter = platform.isWindows ? 'Windows exe files:*.exe' : 'All files:*';
     file = file.openDlg(
-      'Where is  \'rv.exe\' located?',
-      'Windows exe files:*.exe'
+      'Where is \'rv' + platform.exeExtension + '\' located?',
+      filter
     );
+
+    if (!file) {
+      return;
+    }
 
     settings.rv.rv_bin = file.fsName;
     setSetting('rv_bin', settings.rv.rv_bin);
@@ -197,10 +203,12 @@ var Settings = function(thisObj) {
    * Sets the ffmpeg_bin.
    */
   function ffmpegPickButton_onClick() {
+    var platform = new Platform();
     var ffmpeg = new File('/');
+    var filter = platform.isWindows ? 'ffmpeg.exe:ffmpeg.exe' : 'All files:*';
     ffmpeg = ffmpeg.openDlg(
-      'Select the location of the ffmpeg.exe',
-      'ffmpeg.exe:ffmpeg.exe'
+      'Select the location of ffmpeg' + platform.exeExtension,
+      filter
     );
 
     if (!ffmpeg) {
@@ -242,10 +250,12 @@ var Settings = function(thisObj) {
    * Sets the aerender bin.
    */
   function aerenderPickButton_onClick() {
+    var platform = new Platform();
     var aerender = new File('/');
+    var filter = platform.isWindows ? 'aerender.exe:aerender.exe' : 'All files:*';
     aerender = aerender.openDlg(
-      'Select the location of aerender.exe',
-      'aerender.exe:aerender.exe'
+      'Select the location of aerender' + platform.exeExtension,
+      filter
     );
 
     if (!aerender) {
@@ -553,6 +563,7 @@ var Settings = function(thisObj) {
       }
 
       settings.aerender.aerender_bin = function() {
+        var platform = new Platform();
         var aerender = new File('/');
 
         if (getSetting('aerender_bin')) {
@@ -563,23 +574,26 @@ var Settings = function(thisObj) {
           }
         }
 
-        aerender.changePath(File.decode(Folder.startup.absoluteURI + '/aerender.exe'));
+        // Try platform-specific default path
+        var defaultPath = platform.getDefaultAerenderPath();
+        aerender.changePath(File.decode(defaultPath));
 
         if (aerender.exists) {
           string = aerender.fsName;
         } else {
-          var text = 'Aerender.exe could not be located.\n';
+          var text = 'Aerender' + platform.exeExtension + ' could not be located.\n';
           text += 'Do you want to manually select it?';
 
           var prompt = confirm(
             text,
-            'Where is aerender.exe?'
+            'Where is aerender' + platform.exeExtension + '?'
           );
 
           if (prompt) {
+            var filter = platform.isWindows ? 'aerender.exe:aerender.exe' : 'All files:*';
             aerender = aerender.openDlg(
-              'Select the location of aerender.exe',
-              'aerender.exe:aerender.exe'
+              'Select the location of aerender' + platform.exeExtension,
+              filter
             );
 
             if (aerender) {
@@ -733,7 +747,7 @@ var Settings = function(thisObj) {
       var aerenderPanel = binGroup.add(
         'panel',
         undefined,
-        'Aerender.exe', {
+        'Aerender', {
           borderstyle: 'gray',
           name: 'aerenderPanel',
         }

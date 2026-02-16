@@ -5,7 +5,8 @@ var FFMPEG = function() {
   ' -i "[basepath]' + '/' + '[basename][padding].[ext]" [frameoverlay] -start_number [start]' +
   ' -frames:v [duration] [customOptions] "[output]"';
 
-  var ffmpeg_overlay = '-vf "drawtext=fontfile=/Windows/Fonts/Arial.ttf: text=[text]%%{eif\\\\:n+[start]\\\\:d}: x=(w-tw)/2: y=h-(2*lh): fontcolor=white: box=1: boxcolor=0x00000099"';
+  var platform = new Platform();
+  var ffmpeg_overlay = '-vf "drawtext=fontfile=[fontpath]: text=[text]%%{eif\\\\:n+[start]\\\\:d}: x=(w-tw)/2: y=h-(2*lh): fontcolor=white: box=1: boxcolor=0x00000099"';
 
   var cls = function(path) {
     var cls = this;
@@ -18,6 +19,7 @@ var FFMPEG = function() {
 
     getOverlay: function(dataItem) {
       return ffmpeg_overlay.
+        replace(/\[fontpath\]/g, platform.getFontPath()).
         replace(/\[text\]/g, String(dataItem.basename)).
         replace(/\[start\]/g, String(dataItem.startframe));
     },
@@ -57,11 +59,7 @@ var FFMPEG = function() {
         return;
       }
 
-      if (!(File.fs === 'Windows')) {
-        return;
-      }
-
-      var cmd = 'cmd /c "' + this.ffmpeg_cmd + '"';
+      var cmd = platform.getShellPrefix() + '"' + this.ffmpeg_cmd + '"';
       var call;
       call = system.callSystem(cmd);
       return call;

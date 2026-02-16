@@ -701,6 +701,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       }
 
+      var platform = new Platform();
       var omItem = data.getOutputModule(
         data.item(listItem.selection.index).rqIndex,
         data.item(listItem.selection.index).omIndex
@@ -753,12 +754,13 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
       var index = cls.prototype.getSelection();
 
-      var batname = (
+      var scriptExt = platform.getScriptExtension();
+      var scriptname = (
         '[' + app.project.file.displayName + ']' +
         '[' + data.item(index).compname + ']' +
-        '_ffmpeg.bat'
+        '_ffmpeg' + scriptExt
       );
-      var bat = new File(TEMP_DIR.absoluteURI + '/' + batname);
+      var scriptFile = new File(TEMP_DIR.absoluteURI + '/' + scriptname);
 
       var cmd = '';
 
@@ -772,20 +774,36 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       }
 
-      cmd = (
-        ffmpeg.getCommand(data.item(index), h264.fsName) + ' & ' +
-        'if exist "' + h264.fsName + '" ' +
-        'start "" "' + h264.fsName + '"'
-      );
+      if (platform.isWindows) {
+        cmd = (
+          ffmpeg.getCommand(data.item(index), h264.fsName) + ' & ' +
+          'if exist "' + h264.fsName + '" ' +
+          'start "" "' + h264.fsName + '"'
+        );
 
-      var start = (
-        'start \"' + 'FFmpeg' + '\" ' + 'cmd /c "' + cmd + '"'
-      );
+        var start = (
+          'start \"' + 'FFmpeg' + '\" ' + 'cmd /c "' + cmd + '"'
+        );
 
-      bat.open('w');
-      bat.write(start);
-      bat.close();
-      bat.execute();
+        scriptFile.open('w');
+        scriptFile.write(start);
+        scriptFile.close();
+      } else {
+        cmd = (
+          ffmpeg.getCommand(data.item(index), h264.fsName) + ' && ' +
+          'if [ -f "' + h264.fsName + '" ]; then open "' + h264.fsName + '"; fi'
+        );
+
+        var scriptContent = '#!/bin/bash\n' + cmd + ' &';
+
+        scriptFile.open('w');
+        scriptFile.write(scriptContent);
+        scriptFile.close();
+
+        platform.setExecutePermissions(scriptFile);
+      }
+
+      scriptFile.execute();
     },
 
     aerender: function(promptForFile) {
@@ -801,6 +819,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       }
 
+      var platform = new Platform();
       var omItem = data.getOutputModule(
         data.item(listItem.selection.index).rqIndex,
         data.item(listItem.selection.index).omIndex
@@ -816,7 +835,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       pathcontrol.initFromOutputModule(omItem);
 
       var saved;
-      var bat;
+      var scriptFile;
 
       try {
         saved = app.project.file.exists;
@@ -837,13 +856,14 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       }
 
       var index = cls.prototype.getSelection();
-      var batname = (
+      var scriptExt = platform.getScriptExtension();
+      var scriptname = (
         '[' + app.project.file.displayName + ']' +
         '[' + data.item(index).compname + ']' +
-        '.bat'
+        scriptExt
       );
 
-      bat = new File(TEMP_DIR.absoluteURI + '/' + batname);
+      scriptFile = new File(TEMP_DIR.absoluteURI + '/' + scriptname);
 
       app.project.save();
 
@@ -858,44 +878,68 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       omItem.file.parent.create();
 
       if (promptForFile) {
-        bat.changePath(getSetting('pathcontrol_path') + '/' + batname);
-        bat = bat.openDlg('Save aerender batch file.', 'Batch:*.bat', false);
-        if (!bat) {
+        var dialogFilter = platform.isWindows ? 'Batch:*.bat' : 'Shell Script:*.sh';
+        scriptFile.changePath(getSetting('pathcontrol_path') + '/' + scriptname);
+        scriptFile = scriptFile.openDlg('Save aerender script file.', dialogFilter, false);
+        if (!scriptFile) {
           return;
         }
       }
 
-      var variables = '::' + app.project.file.fsName + '\n' +
-        '::' + data.item(index).compname + '\n' +
-        'set aerenderPath=' + getSetting('aerender_bin') + '\n' +
-        'set project=' + app.project.file.fsName + '\n' +
-        'set rqindex=' + data.item(index).rqIndex + '\n' +
-        'set output=' + omItem.file.fsName + '\n' +
-        'set s=' + parseInt(data.item(index).startframe, 10) + '\n' +
-        'set e=' + parseInt(data.item(index).endframe, 10) + '\n';
+      var cmd;
+      var scriptContent;
 
-      var cmd = '"%aerenderPath%"' +
-        ' -project "%project%"' +
-        ' -rqindex %rqindex%' +
-        ' -output "%output%"' +
-        ' -s %s%' +
-        ' -e %e%' +
-        ' -sound ON -continueOnMissingFootage';
+      if (platform.isWindows) {
+        var variables = '::' + app.project.file.fsName + '\n' +
+          '::' + data.item(index).compname + '\n' +
+          'set aerenderPath=' + getSetting('aerender_bin') + '\n' +
+          'set project=' + app.project.file.fsName + '\n' +
+          'set rqindex=' + data.item(index).rqIndex + '\n' +
+          'set output=' + omItem.file.fsName + '\n' +
+          'set s=' + parseInt(data.item(index).startframe, 10) + '\n' +
+          'set e=' + parseInt(data.item(index).endframe, 10) + '\n';
+
+        cmd = '"%aerenderPath%"' +
+          ' -project "%project%"' +
+          ' -rqindex %rqindex%' +
+          ' -output "%output%"' +
+          ' -s %s%' +
+          ' -e %e%' +
+          ' -sound ON -continueOnMissingFootage';
+      } else {
+        cmd = '"' + getSetting('aerender_bin') + '"' +
+          ' -project "' + app.project.file.fsName + '"' +
+          ' -rqindex ' + data.item(index).rqIndex +
+          ' -output "' + omItem.file.fsName + '"' +
+          ' -s ' + parseInt(data.item(index).startframe, 10) +
+          ' -e ' + parseInt(data.item(index).endframe, 10) +
+          ' -sound ON -continueOnMissingFootage';
+      }
 
       var manager = new Taskmanager();
       var PIDs = manager.getPIDs();
       var start;
 
       if (PIDs.length !== 0) {
-        start = (
-          'start \"' + 'Rendering ' +
-          data.item(index).compname + ' of ' +
-          app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
-        );
-        bat.open('w');
-        bat.write(variables + '\n' + start);
-        bat.close();
-        bat.execute();
+        if (platform.isWindows) {
+          start = (
+            'start \"' + 'Rendering ' +
+            data.item(index).compname + ' of ' +
+            app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
+          );
+          scriptFile.open('w');
+          scriptFile.write(variables + '\n' + start);
+          scriptFile.close();
+        } else {
+          scriptContent = '#!/bin/bash\n' +
+            '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
+            cmd + ' &\n';
+          scriptFile.open('w');
+          scriptFile.write(scriptContent);
+          scriptFile.close();
+          platform.setExecutePermissions(scriptFile);
+        }
+        scriptFile.execute();
         return;
       }
 
@@ -909,24 +953,43 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
         var ffmpeg_cmd = ffmpeg.getCommand(data.item(index), h264.fsName);
         if (ffmpeg_cmd) {
-          cmd = (
-            cmd + ' & ' +
-            ffmpeg_cmd + ' & ' +
-            'start "" "' + h264.fsName + '"'
-          );
+          if (platform.isWindows) {
+            cmd = (
+              cmd + ' & ' +
+              ffmpeg_cmd + ' & ' +
+              'start "" "' + h264.fsName + '"'
+            );
+          } else {
+            cmd = (
+              cmd + ' && ' +
+              ffmpeg_cmd + ' && ' +
+              'open "' + h264.fsName + '"'
+            );
+          }
         }
       }
 
-      start = (
-        'start \"' + 'Rendering ' +
-        data.item(index).compname + ' of ' +
-        app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
-      );
+      if (platform.isWindows) {
+        start = (
+          'start \"' + 'Rendering ' +
+          data.item(index).compname + ' of ' +
+          app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
+        );
 
-      bat.open('w');
-      bat.write(variables + '\n' + start);
-      bat.close();
-      bat.execute();
+        scriptFile.open('w');
+        scriptFile.write(variables + '\n' + start);
+        scriptFile.close();
+      } else {
+        scriptContent = '#!/bin/bash\n' +
+          '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
+          cmd + ' &\n';
+        scriptFile.open('w');
+        scriptFile.write(scriptContent);
+        scriptFile.close();
+        platform.setExecutePermissions(scriptFile);
+      }
+
+      scriptFile.execute();
     },
 
     setSelection: function(index) {
@@ -972,6 +1035,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
+    var platform = new Platform();
     var omItem = data.getOutputModule(
       data.item(listItem.selection.index).rqIndex,
       data.item(listItem.selection.index).omIndex
@@ -996,7 +1060,8 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     var item = data.item(listItem.selection.index);
 
     var sequencePath = item.file.fsName;
-    var file = new File(TEMP_DIR.absoluteURI + '/renderQueuePlus_rvCall.bat');
+    var scriptExt = platform.getScriptExtension();
+    var file = new File(TEMP_DIR.absoluteURI + '/renderQueuePlus_rvCall' + scriptExt);
     var cmd;
 
     if (getSetting('rv_bin') === null) {
@@ -1038,16 +1103,23 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
     if (cmd) {
       var string;
-      if (File.fs === 'Windows') {
+      if (platform.isWindows) {
         string = '@echo off\n' +
           'start "" ' + cmd + '\n' +
           'exit /b';
-
-        file.open('w');
-        file.write(string);
-        file.close();
-        file.execute();
+      } else {
+        string = '#!/bin/bash\n' + cmd + ' &';
       }
+
+      file.open('w');
+      file.write(string);
+      file.close();
+
+      if (platform.isMac) {
+        platform.setExecutePermissions(file);
+      }
+
+      file.execute();
     }
   }
 

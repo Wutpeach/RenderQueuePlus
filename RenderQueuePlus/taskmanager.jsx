@@ -26,17 +26,18 @@ SOFTWARE.
 
 
 var Taskmanager = function() {
-  var re1 = /(.*aerender.exe.*)/gim;
+  var platform = new Platform();
+  var re1 = platform.isWindows ? /(.*aerender.exe.*)/gim : /(.*aerender.*)/gim;
   var re2 = /(.*afterfx.com.*)/gim;
 
   var cls = function() {
     this.data = function() {
-        if (File.fs === 'Windows') {
-            var data = system.callSystem('tasklist');
-            if (data.length > 0) {
-                return data;
-            }
+        var cmd = platform.getProcessListCommand();
+        var data = system.callSystem(cmd);
+        if (data.length > 0) {
+            return data;
         }
+        return '';
     }();
     this.status = false;
   };
@@ -62,14 +63,16 @@ var Taskmanager = function() {
         for (i = 0; i < items.length; i++) {
           item = items[i];
           item = item.replace(/\s+/gi, ',');
-          names.push(item.split(',')[0]);
+          var parts = item.split(',');
+          names.push(platform.isWindows ? parts[0] : 'aerender');
         }
       } else if (re2.test(this.data)) {
         items = this.data.match(re2);
         for (i = 0; i < items.length; i++) {
           item = items[i];
           item = item.replace(/\s+/gi, ',');
-          names.push(item.split(',')[0]);
+          var parts = item.split(',');
+          names.push(platform.isWindows ? parts[0] : 'afterfx.com');
         }
       }
       return names;
@@ -86,21 +89,23 @@ var Taskmanager = function() {
         for (i = 0; i < items.length; i++) {
           item = items[i];
           item = item.replace(/\s+/gi, ',');
-          PIDs.push(item.split(',')[1]);
+          var parts = item.split(',');
+          PIDs.push(platform.isWindows ? parts[1] : parts[1]);
         }
       } else if (re2.test(this.data)) {
         items = this.data.match(re2);
         for (i = 0; i < items.length; i++) {
           item = items[i];
           item = item.replace(/\s+/gi, ',');
-          PIDs.push(item.split(',')[1]);
+          var parts = item.split(',');
+          PIDs.push(platform.isWindows ? parts[1] : parts[1]);
         }
       }
       return PIDs;
     },
 
     validate: function(PID) {
-        var cmd = 'tasklist /fi "pid eq ' + PID + '" ';
+        var cmd = platform.getProcessValidateCommand(PID);
         var call = system.callSystem(cmd);
 
         if (re1.test(call)) {
@@ -113,9 +118,9 @@ var Taskmanager = function() {
     },
 
     kill: function(PID) {
-        var cmd = 'taskkill /f /t /pid ';
+        var cmd = platform.getKillCommand(PID);
         if (this.validate(PID)) {
-            var call = system.callSystem(cmd + PID);
+            var call = system.callSystem(cmd);
             return call;
         }
     },

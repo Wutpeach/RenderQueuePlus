@@ -26,18 +26,9 @@ SOFTWARE.
 
 
 (function(thisObj) {
-  if (!(File.fs == 'Windows')) {
-    Window.alert(
-      'Sorry, this currently only works on Windows :(\n' +
-      'Let me know if you\'d like to see it implemented for Mac.\n\n' +
-      EMAIL,
-      SCRIPT_NAME
-    );
-    return;
-  };
-
   var projectFile = app.project.file;
 
+  // @include "platform.jsx"
   // @include "common.jsx"
   // @include "icons.jsx"
   // @include "settings.jsx"
@@ -51,6 +42,9 @@ SOFTWARE.
   // @include "aeparchive.jsx"
   // @include "taskmanager.jsx"
   // @include "taskmanagerUI.jsx"
+
+  // Initialize platform
+  var platform = new Platform();
 
   // Module globals
   var settings = new Settings();
