@@ -47,9 +47,15 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     if (!(listItem.selection)) {
       return null;
     }
+    // Handle multiselect - get first selected item
+    var selection = listItem.selection;
+    var index = selection.index;
+    if (selection.length !== undefined && selection.length > 0) {
+      index = selection[0].index;
+    }
     return data.getOutputModule(
-      data.item(listItem.selection.index).rqIndex,
-      data.item(listItem.selection.index).omIndex
+      data.item(index).rqIndex,
+      data.item(index).omIndex
     );
   }
 
@@ -65,6 +71,36 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     var pathcontrol = new Pathcontrol();
     pathcontrol.initFromOutputModule(omItem);
     return pathcontrol;
+  }
+
+  /**
+   * Helper function to get first selected index
+   * @return {number|null} Index of first selected item or null
+   */
+  function getFirstSelectedIndex() {
+    if (!(listItem.selection)) {
+      return null;
+    }
+    var selection = listItem.selection;
+    if (selection.length !== undefined && selection.length > 0) {
+      return selection[0].index;
+    }
+    return selection.index;
+  }
+
+  /**
+   * Helper function to normalize file path
+   * Removes /Volumes/Macintosh HD/ prefix if present
+   * @param {string} path File path
+   * @return {string} Normalized path
+   */
+  function normalizePath(path) {
+    if (!path) return path;
+    // Remove /Volumes/Macintosh HD/ prefix
+    if (path.indexOf('/Volumes/Macintosh HD/') === 0) {
+      return path.replace('/Volumes/Macintosh HD/', '/');
+    }
+    return path;
   }
 
   /**
@@ -94,15 +130,16 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       var UIsepWidth = 10;
 
       var controlsGroup = palette.add('group');
-      controlsGroup.alignment = ['fill', 'fill'];
+      controlsGroup.alignment = ['fill', 'top'];
       controlsGroup.orientation = 'row';
+      controlsGroup.minimumSize = [800, 30];
 
       var controlsGroup1 = controlsGroup.add('group', undefined, {
         name: 'controlsGroup1',
       });
       controlsGroup1.spacing = 10;
       controlsGroup1.alignment = ['left', 'top'];
-      controlsGroup1.preferredSize = [300, ''];
+      controlsGroup1.orientation = 'row';
 
       aerenderButton = controlsGroup1.add(
         'iconbutton',
@@ -146,7 +183,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       batchButton.size = [elemSize, elemSize];
       batchButton.alignment = 'left';
       batchButton.enabled = false;
-      batchButton.helpTip = 'Save a .bat file and start background render';
+      batchButton.helpTip = 'Batch render selected items';
 
       UIsep = controlsGroup1.add(
         'iconbutton',
@@ -293,6 +330,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       });
       controlsGroup2.spacing = 5;
       controlsGroup2.alignment = ['right', 'top'];
+      controlsGroup2.orientation = 'row';
 
       controlsGroup2.add(
         'statictext',
@@ -463,7 +501,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         spacing: 0,
         margins: 0,
         name: 'listItem',
-        multiselect: false,
+        multiselect: true,
         numberOfColumns: inNumColumns,
         showHeaders: true,
         columnTitles: columnTitles,
@@ -577,6 +615,12 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         palette.layout.resize();
 
         palette.onResizing = palette.onResize = function() {
+          // Set minimum width to ensure all buttons are visible
+          var minWidth = 800;
+          if (palette.size.width < minWidth) {
+            palette.size.width = minWidth;
+          }
+
           listGroup.size[0] = listItemWidth + (
             palette.size.width - listItemWidth - margin
           );
@@ -600,6 +644,12 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         listGroup.size[1] = listItem.size[1] = palette.size.height - 65;
 
         palette.onResizing = palette.onResize = function() {
+          // Set minimum width to ensure all buttons are visible
+          var minWidth = 800;
+          if (palette.size.width < minWidth) {
+            palette.size.width = minWidth;
+          }
+
           listGroup.size[0] = listItemWidth + (
             palette.size.width - listItemWidth - margin - 15
           );
@@ -746,9 +796,10 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       }
 
       var pathcontrol = getPathcontrolForSelection();
+      var index = getFirstSelectedIndex();
 
       var ffmpeg = new FFMPEG();
-      var isSequence = ffmpeg.isSequence(data.item(listItem.selection.index).ext);
+      var isSequence = ffmpeg.isSequence(data.item(index).ext);
       if (!isSequence) {
         Window.alert(
           'You can only make movies from image-sequence outputs.',
@@ -773,8 +824,8 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       };
 
-      var duration = data.item(listItem.selection.index).duration;
-      var renderedCount = data.item(listItem.selection.index).rendered.count;
+      var duration = data.item(index).duration;
+      var renderedCount = data.item(index).rendered.count;
       if (duration != renderedCount) {
         Window.alert(
           'The sequence has missing or incomplete frames.\nMake sure all the frames are rendered before continuing.',
@@ -848,43 +899,44 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       scriptFile.execute();
     },
 
-    aerender: function(promptForFile) {
+    aerender: function(promptForFile, batchMode) {
       if (!(listItem.selection)) {
         return;
       }
 
-      if (!aerenderOkToStart(data.item(listItem.selection.index).rqIndex)) {
-        Window.alert(
-          '\'Skip Existing Files\' is available only with ONE output module of type \'Sequence\'',
-          SCRIPT_NAME + ': Multiple sequences in Render Queue Item'
-        );
-        return;
+      // Get all selected items
+      var selectedItems = [];
+      if (batchMode) {
+        // For batch mode, collect all selected items
+        for (var i = 0; i < listItem.items.length; i++) {
+          if (listItem.items[i].selected) {
+            selectedItems.push(i);
+          }
+        }
+        if (selectedItems.length === 0) {
+          Window.alert(
+            'No items selected for batch rendering.',
+            SCRIPT_NAME
+          );
+          return;
+        }
+      } else {
+        // For single mode, use the first selected item
+        var firstIndex = getFirstSelectedIndex();
+        if (firstIndex !== null) {
+          selectedItems.push(firstIndex);
+        }
       }
 
-      var platform = getPlatform();
-      var omItem = getCurrentOutputModule();
-
-      if (omItem === null) {
-        refreshUI();
-        return;
-      }
-
-      var pathcontrol = getPathcontrolForSelection();
-
+      // Check project is saved
       var saved;
-      var scriptFile;
-
       try {
         saved = app.project.file.exists;
       } catch (e) {
         saved = false;
-      };
-
-      if (!(listItem.selection) && !(saved)) {
-        return;
       }
 
-      if (!(saved)) {
+      if (!saved) {
         Window.alert(
           'Project is not saved.\nYou must save it before continuing.',
           SCRIPT_NAME + ': Project is not yet saved.'
@@ -892,180 +944,236 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         return;
       }
 
-      var index = cls.prototype.getSelection();
-      var scriptExt = platform.getScriptExtension();
+      // Debug info collection (disabled by default, uncomment to enable)
+      // var debugInfo = 'Debug Information:\n\n';
+      // debugInfo += 'Selected items: ' + selectedItems.length + '\n';
+      // debugInfo += 'Project: ' + app.project.file.fsName + '\n';
+      // debugInfo += 'aerender path: ' + getSetting('aerender_bin') + '\n\n';
 
-      // Clean up project and comp names to avoid shell special characters
-      // Remove brackets, spaces, and other problematic characters
-      var cleanProjectName = app.project.file.displayName
-        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
-        .replace(/_+/g, '_');  // Replace multiple underscores with single
-      var cleanCompName = data.item(index).compname
-        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
-        .replace(/_+/g, '_');
-
-      var scriptname = (
-        cleanProjectName + '_' + cleanCompName + scriptExt
-      );
-
-      scriptFile = new File(TEMP_DIR.absoluteURI + '/' + scriptname);
-
-      // Save project
+      // Save project once before rendering
       $.writeln('RenderQueue+: Saving project...');
       app.project.save();
       $.writeln('RenderQueue+: Project saved.');
 
-      // Create archive
-      $.writeln('RenderQueue+: Creating archive...');
-      try {
-        var aeparchive = new Aeparchives(
-          getSetting('pathcontrol_path'),
-          data.item(index).compname,
-          pathcontrol.getVersionString()
-        );
-        aeparchive.createDir();
-        aeparchive.archive();
-        $.writeln('RenderQueue+: Archive created.');
-      } catch (archiveError) {
-        $.writeln('RenderQueue+: Archive failed: ' + archiveError.toString());
-        // Continue anyway - archive is not critical
-      }
+      var platform = getPlatform();
+      var scriptExt = platform.getScriptExtension();
+      var cleanProjectName = app.project.file.displayName
+        .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
+        .replace(/_+/g, '_');
 
-      // Create output directory
-      $.writeln('RenderQueue+: Creating output directory...');
-      omItem.file.parent.create();
-      $.writeln('RenderQueue+: Output directory created.');
+      // Render each selected item
+      for (var itemIdx = 0; itemIdx < selectedItems.length; itemIdx++) {
+        var index = selectedItems[itemIdx];
 
-      if (promptForFile) {
-        var dialogFilter = platform.isWindows ? 'Batch:*.bat' : 'Shell Script:*.sh';
-        scriptFile.changePath(getSetting('pathcontrol_path') + '/' + scriptname);
-        scriptFile = scriptFile.openDlg('Save aerender script file.', dialogFilter, false);
-        if (!scriptFile) {
-          return;
+        // debugInfo += '--- Item ' + (itemIdx + 1) + ' ---\n';
+        // debugInfo += 'Comp: ' + data.item(index).compname + '\n';
+        // debugInfo += 'RQ Index: ' + data.item(index).rqIndex + '\n';
+
+        if (!aerenderOkToStart(data.item(index).rqIndex)) {
+          Window.alert(
+            '\'Skip Existing Files\' is available only with ONE output module of type \'Sequence\'\nSkipping: ' + data.item(index).compname,
+            SCRIPT_NAME + ': Multiple sequences in Render Queue Item'
+          );
+          continue;
         }
-      }
 
-      var cmd;
-      var scriptContent;
+        var omItem = data.getOutputModule(
+          data.item(index).rqIndex,
+          data.item(index).omIndex
+        );
 
-      if (platform.isWindows) {
-        var variables = '::' + app.project.file.fsName + '\n' +
-          '::' + data.item(index).compname + '\n' +
-          'set aerenderPath=' + getSetting('aerender_bin') + '\n' +
-          'set project=' + app.project.file.fsName + '\n' +
-          'set rqindex=' + data.item(index).rqIndex + '\n' +
-          'set output=' + omItem.file.fsName + '\n' +
-          'set s=' + parseInt(data.item(index).startframe, 10) + '\n' +
-          'set e=' + parseInt(data.item(index).endframe, 10) + '\n';
+        if (omItem === null) {
+          // debugInfo += 'ERROR: Output module not found\n';
+          $.writeln('RenderQueue+: Output module not found for item ' + index);
+          continue;
+        }
 
-        cmd = '"%aerenderPath%"' +
-          ' -project "%project%"' +
-          ' -rqindex %rqindex%' +
-          ' -output "%output%"' +
-          ' -s %s%' +
-          ' -e %e%' +
-          ' -sound ON -continueOnMissingFootage';
-      } else {
-        cmd = '"' + getSetting('aerender_bin') + '"' +
-          ' -project "' + app.project.file.fsName + '"' +
-          ' -rqindex ' + data.item(index).rqIndex +
-          ' -output "' + omItem.file.fsName + '"' +
-          ' -s ' + parseInt(data.item(index).startframe, 10) +
-          ' -e ' + parseInt(data.item(index).endframe, 10) +
-          ' -sound ON -continueOnMissingFootage';
-      }
+        // debugInfo += 'Output path: ' + omItem.file.fsName + '\n';
 
-      $.writeln('RenderQueue+: Checking for running processes...');
-      var manager = new Taskmanager();
-      var PIDs = manager.getPIDs();
-      $.writeln('RenderQueue+: Found ' + PIDs.length + ' running aerender processes');
-      var start;
+        // Normalize output path to remove /Volumes/Macintosh HD/ prefix
+        var outputPath = normalizePath(omItem.file.fsName);
+        // debugInfo += 'Normalized path: ' + outputPath + '\n';
 
-      if (PIDs.length !== 0) {
+        var pathcontrol = new Pathcontrol();
+        pathcontrol.initFromOutputModule(omItem);
+
+        var cleanCompName = data.item(index).compname
+          .replace(/[\[\]\s\(\)\&\|\;\<\>\$\`\"\'\\]/g, '_')
+          .replace(/_+/g, '_');
+
+        var scriptname = cleanProjectName + '_' + cleanCompName + scriptExt;
+        var scriptFile = new File(TEMP_DIR.absoluteURI + '/' + scriptname);
+
+        // debugInfo += 'Script file: ' + scriptFile.fsName + '\n';
+
+        // Create archive
+        $.writeln('RenderQueue+: Creating archive for ' + data.item(index).compname + '...');
+        try {
+          var aeparchive = new Aeparchives(
+            getSetting('pathcontrol_path'),
+            data.item(index).compname,
+            pathcontrol.getVersionString()
+          );
+          aeparchive.createDir();
+          aeparchive.archive();
+          $.writeln('RenderQueue+: Archive created.');
+        } catch (archiveError) {
+          $.writeln('RenderQueue+: Archive failed: ' + archiveError.toString());
+        }
+
+        // Create output directory
+        $.writeln('RenderQueue+: Creating output directory...');
+        omItem.file.parent.create();
+        $.writeln('RenderQueue+: Output directory created.');
+
+        var cmd;
+        var scriptContent;
+
+        $.writeln('RenderQueue+: Building render command...');
+        $.writeln('RenderQueue+: aerender path: ' + getSetting('aerender_bin'));
+        $.writeln('RenderQueue+: project path: ' + app.project.file.fsName);
+        $.writeln('RenderQueue+: rqindex: ' + data.item(index).rqIndex);
+        $.writeln('RenderQueue+: output path (original): ' + omItem.file.fsName);
+        $.writeln('RenderQueue+: output path (normalized): ' + outputPath);
+        $.writeln('RenderQueue+: start frame: ' + parseInt(data.item(index).startframe, 10));
+        $.writeln('RenderQueue+: end frame: ' + parseInt(data.item(index).endframe, 10));
+
+        if (platform.isWindows) {
+          var variables = '::' + app.project.file.fsName + '\n' +
+            '::' + data.item(index).compname + '\n' +
+            'set aerenderPath=' + getSetting('aerender_bin') + '\n' +
+            'set project=' + app.project.file.fsName + '\n' +
+            'set rqindex=' + data.item(index).rqIndex + '\n' +
+            'set output=' + outputPath + '\n' +
+            'set s=' + parseInt(data.item(index).startframe, 10) + '\n' +
+            'set e=' + parseInt(data.item(index).endframe, 10) + '\n';
+
+          cmd = '"%aerenderPath%"' +
+            ' -project "%project%"' +
+            ' -rqindex %rqindex%' +
+            ' -output "%output%"' +
+            ' -s %s%' +
+            ' -e %e%' +
+            ' -sound ON -continueOnMissingFootage';
+        } else {
+          cmd = '"' + getSetting('aerender_bin') + '"' +
+            ' -project "' + app.project.file.fsName + '"' +
+            ' -rqindex ' + data.item(index).rqIndex +
+            ' -output "' + outputPath + '"' +
+            ' -s ' + parseInt(data.item(index).startframe, 10) +
+            ' -e ' + parseInt(data.item(index).endframe, 10) +
+            ' -sound ON -continueOnMissingFootage';
+        }
+
+        $.writeln('RenderQueue+: Command: ' + cmd);
+        // debugInfo += 'Command: ' + cmd + '\n\n';
+
+        $.writeln('RenderQueue+: Checking for running processes...');
+        var manager = new Taskmanager();
+        var PIDs = manager.getPIDs();
+        $.writeln('RenderQueue+: Found ' + PIDs.length + ' running aerender processes');
+        var start;
+
+        if (PIDs.length !== 0) {
+          if (platform.isWindows) {
+            start = (
+              'start \"' + 'Rendering ' +
+              data.item(index).compname + ' of ' +
+              app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
+            );
+            scriptFile.open('w');
+            scriptFile.write(variables + '\n' + start);
+            scriptFile.close();
+          } else {
+            scriptContent = '#!/bin/bash\n' +
+              '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
+              'nohup ' + cmd + ' > /tmp/aerender_' + cleanCompName + '.log 2>&1 &\n' +
+              'echo "Render started with PID: $!"\n';
+
+            scriptFile.encoding = 'UTF-8';
+            scriptFile.lineFeed = 'Unix';
+            scriptFile.open('w');
+            scriptFile.write(scriptContent);
+            scriptFile.close();
+            platform.setExecutePermissions(scriptFile);
+          }
+
+          // Execute script
+          $.writeln('RenderQueue+: Executing render script: ' + scriptFile.fsName);
+          scriptFile.execute();
+          continue;
+        }
+
+        if (getSetting('ffmpeg_enabled') == 'true') {
+          var ffmpeg = new FFMPEG();
+          var h264 = new File(
+            data.item(index).basepath + '/' +
+            data.item(index).basename + 'h264.mp4'
+          );
+          h264.changePath(h264.parent.parent.absoluteURI + '/' + h264.name);
+
+          var ffmpeg_cmd = ffmpeg.getCommand(data.item(index), h264.fsName);
+          if (ffmpeg_cmd) {
+            if (platform.isWindows) {
+              cmd = (
+                cmd + ' & ' +
+                ffmpeg_cmd + ' & ' +
+                'start "" "' + h264.fsName + '"'
+              );
+            } else {
+              cmd = (
+                cmd + ' && ' +
+                ffmpeg_cmd + ' && ' +
+                'open "' + h264.fsName + '"'
+              );
+            }
+          }
+        }
+
         if (platform.isWindows) {
           start = (
             'start \"' + 'Rendering ' +
             data.item(index).compname + ' of ' +
             app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
           );
+
           scriptFile.open('w');
           scriptFile.write(variables + '\n' + start);
           scriptFile.close();
         } else {
+          $.writeln('RenderQueue+: Creating shell script...');
           scriptContent = '#!/bin/bash\n' +
             '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
-            cmd + ' &\n';
+            'nohup ' + cmd + ' > /tmp/aerender_' + cleanCompName + '.log 2>&1 &\n' +
+            'echo "Render started with PID: $!"\n';
+          $.writeln('RenderQueue+: Script content: ' + scriptContent);
 
-          // Set line feed encoding to Unix for Mac
           scriptFile.encoding = 'UTF-8';
           scriptFile.lineFeed = 'Unix';
           scriptFile.open('w');
           scriptFile.write(scriptContent);
           scriptFile.close();
+
+          $.writeln('RenderQueue+: Setting execute permissions...');
           platform.setExecutePermissions(scriptFile);
+          $.writeln('RenderQueue+: Script file created at: ' + scriptFile.fsName);
         }
+
+        $.writeln('RenderQueue+: Executing script...');
+        // Execute script - use scriptFile.execute() as it's more reliable
         scriptFile.execute();
-        return;
+        $.writeln('RenderQueue+: Script executed successfully.');
       }
 
-      if (getSetting('ffmpeg_enabled') == 'true') {
-        var ffmpeg = new FFMPEG();
-        var h264 = new File(
-          data.item(index).basepath + '/' +
-          data.item(index).basename + 'h264.mp4'
+      // Show debug info (disabled by default)
+      // Window.alert(debugInfo, 'Render Debug Info');
+
+      if (batchMode && selectedItems.length > 1) {
+        Window.alert(
+          'Started rendering ' + selectedItems.length + ' items.\n\nCheck render progress:\n- Log files: /tmp/aerender_<compname>.log\n- Process: ps aux | grep aerender',
+          SCRIPT_NAME
         );
-        h264.changePath(h264.parent.parent.absoluteURI + '/' + h264.name);
-
-        var ffmpeg_cmd = ffmpeg.getCommand(data.item(index), h264.fsName);
-        if (ffmpeg_cmd) {
-          if (platform.isWindows) {
-            cmd = (
-              cmd + ' & ' +
-              ffmpeg_cmd + ' & ' +
-              'start "" "' + h264.fsName + '"'
-            );
-          } else {
-            cmd = (
-              cmd + ' && ' +
-              ffmpeg_cmd + ' && ' +
-              'open "' + h264.fsName + '"'
-            );
-          }
-        }
       }
-
-      if (platform.isWindows) {
-        start = (
-          'start \"' + 'Rendering ' +
-          data.item(index).compname + ' of ' +
-          app.project.file.displayName + '\" ' + 'cmd /c "' + cmd + '"'
-        );
-
-        scriptFile.open('w');
-        scriptFile.write(variables + '\n' + start);
-        scriptFile.close();
-      } else {
-        $.writeln('RenderQueue+: Creating shell script...');
-        scriptContent = '#!/bin/bash\n' +
-          '# Rendering ' + data.item(index).compname + ' of ' + app.project.file.displayName + '\n' +
-          cmd + ' &\n';
-        $.writeln('RenderQueue+: Script content: ' + scriptContent);
-
-        // Set line feed encoding to Unix for Mac
-        scriptFile.encoding = 'UTF-8';
-        scriptFile.lineFeed = 'Unix';
-        scriptFile.open('w');
-        scriptFile.write(scriptContent);
-        scriptFile.close();
-
-        $.writeln('RenderQueue+: Setting execute permissions...');
-        platform.setExecutePermissions(scriptFile);
-        $.writeln('RenderQueue+: Script file created at: ' + scriptFile.fsName);
-      }
-
-      $.writeln('RenderQueue+: Executing script...');
-      scriptFile.execute();
-      $.writeln('RenderQueue+: Script executed successfully.');
     },
 
     setSelection: function(index) {
@@ -1075,7 +1183,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
     getSelection: function() {
       try {
-        return listItem.selection.index;
+        return getFirstSelectedIndex();
       } catch (e) {
         return null;
       }
@@ -1128,7 +1236,8 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     var rvPath = getSetting('rv_bin');
     var rvCall = getSetting('rv_call');
 
-    var item = data.item(listItem.selection.index);
+    var index = getFirstSelectedIndex();
+    var item = data.item(index);
 
     var sequencePath = item.file.fsName;
     var scriptExt = platform.getScriptExtension();
@@ -1209,7 +1318,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       return;
     }
 
-    var index = listItem.selection.index;
+    var index = getFirstSelectedIndex();
     var f = data.item(index).file;
     var p = f.parent;
 
@@ -1369,7 +1478,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
 
     try {
       if (listItem.selection) {
-        var index = listItem.selection.index;
+        var index = getFirstSelectedIndex();
 
         var frameWindow = new FrameWindow();
         frameWindow.setIndex(index);
@@ -1407,17 +1516,21 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
    */
   function aerenderButton_onClick() {
     try {
-      cls.prototype.aerender(false);
+      cls.prototype.aerender(false, false);
     } catch (e) {
       catchError(e);
     }
   }
 
   /**
-   * Start a batch render and create batch file
+   * Start a batch render for all selected items
    */
   function batchButton_onClick() {
-    cls.prototype.aerender(true);
+    try {
+      cls.prototype.aerender(false, true);
+    } catch (e) {
+      catchError(e);
+    }
   }
 
   /**
@@ -1453,7 +1566,7 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     if (!(listItem.selection)) {
       return;
     }
-    var index = listItem.selection.index;
+    var index = getFirstSelectedIndex();
 
     if (data.item(index).exists.paths.length < 1) {
       Window.alert(
@@ -1498,8 +1611,9 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     pathcontrol.initFromOutputModule(omItem);
 
     pathcontrol.setVersion(pathcontrol.getVersion() + 1);
+    var index = getFirstSelectedIndex();
     pathcontrol.apply(
-      data.item(listItem.selection.index)
+      data.item(index)
     );
 
     refreshButton_onClick();
@@ -1524,8 +1638,9 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     pathcontrol.initFromOutputModule(omItem);
 
     pathcontrol.setVersion(1);
+    var index = getFirstSelectedIndex();
     pathcontrol.apply(
-      data.item(listItem.selection.index)
+      data.item(index)
     );
 
     refreshButton_onClick();
@@ -1556,11 +1671,12 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
     }
 
     var pathcontrol = getPathcontrolForSelection();
+    var index = getFirstSelectedIndex();
 
     if (sel.text === 'Set Version Control') {
       setRenderQueueItemDefaults(
-        data.item(listItem.selection.index).rqIndex,
-        data.item(listItem.selection.index).omIndex,
+        data.item(index).rqIndex,
+        data.item(index).omIndex,
         pathcontrol
       );
 
@@ -1570,15 +1686,15 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         rootpath[rootpath.length - 1] == '\\'
       ) {
         pathcontrol.setBasepath(
-          rootpath + data.item(listItem.selection.index).compname
+          rootpath + data.item(index).compname
         );
       } else {
         pathcontrol.setBasepath(
-          rootpath + '/' + data.item(listItem.selection.index).compname
+          rootpath + '/' + data.item(index).compname
         );
       }
       pathcontrol.apply(
-        data.item(listItem.selection.index)
+        data.item(index)
       );
     } else {
       pathcontrol.setVersion(
@@ -1590,15 +1706,15 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
         rootpath[rootpath.length - 1] == '\\'
       ) {
         pathcontrol.setBasepath(
-          rootpath + data.item(listItem.selection.index).compname
+          rootpath + data.item(index).compname
         );
       } else {
         pathcontrol.setBasepath(
-          rootpath + '/' + data.item(listItem.selection.index).compname
+          rootpath + '/' + data.item(index).compname
         );
       }
       pathcontrol.apply(
-        data.item(listItem.selection.index)
+        data.item(index)
       );
     }
 
@@ -1623,15 +1739,25 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
       versionsReset.enabled = true;
       versionsDropdown.enabled = true;
 
-      var omItem = getCurrentOutputModule();
+      // Get the first selected item for UI updates
+      var firstSelection = listItem.selection;
+      if (listItem.selection.length !== undefined) {
+        // Multiple selection - use first item
+        firstSelection = listItem.selection[0];
+      }
+
+      var omItem = data.getOutputModule(
+        data.item(firstSelection.index).rqIndex,
+        data.item(firstSelection.index).omIndex
+      );
 
       if (omItem === null) {
         refreshUI();
         return;
       }
 
-      var pathcontrol = getPathcontrolForSelection();
-
+      var pathcontrol = new Pathcontrol();
+      pathcontrol.initFromOutputModule(omItem);
 
       if (pathcontrol.getVersion()) {
         var fsName = getSetting('pathcontrol_path');
@@ -1640,11 +1766,11 @@ var MainWindow = function(thisObj, inTitle, inNumColumns, columnTitles, columnWi
           fsName[fsName.length - 1] == '\\'
         ) {
           pathcontrol.setBasepath(
-            fsName + data.item(listItem.selection.index).compname
+            fsName + data.item(firstSelection.index).compname
           );
         } else {
           pathcontrol.setBasepath(
-            fsName + '/' + data.item(listItem.selection.index).compname
+            fsName + '/' + data.item(firstSelection.index).compname
           );
         }
 
