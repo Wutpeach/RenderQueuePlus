@@ -6,7 +6,8 @@
 # Development tools
 .claude/
 .cursor/
-.trellis/
+.trellis/*
+!.trellis/spec/
 
 # Development notes
 AGENTS.md
